@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/trentzhou/proc-cpu-stat/src/proc"
+	"github.com/trentzhou/proc-cpu-stat/proc"
 )
 
 func main() {

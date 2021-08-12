@@ -2,6 +2,8 @@
 
 Linux tool show show thread CPU usage under a process.
 
+## The python version
+
 Usage: `./proc_cpu_stat.py [pid]`
 
 For example:
@@ -32,4 +34,12 @@ $ ./proc_cpu_stat.py 21283
 
 ```
 
-TODO: rewrite in golang.
+## The golang version
+
+To get the golang version:
+
+```
+go get github.com/trentzhou/proc-cpu-stat
+```
+
+Then you'll see the executable `proc-cpu-stat` under $GOPATH/bin.

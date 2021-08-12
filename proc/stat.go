@@ -14,6 +14,10 @@ type StatUnit interface {
 }
 
 type Stat struct {
+	// display options
+	showAll bool
+	watch   bool
+
 	parent      StatUnit
 	children    map[int]StatUnit
 	hz          int
@@ -22,8 +26,8 @@ type Stat struct {
 	lastTime    time.Time
 }
 
-func NewStat() *Stat {
-	s := Stat{}
+func NewStat(showAll, watch bool) *Stat {
+	s := Stat{showAll: showAll, watch: watch}
 	// get hz
 	hz := getCommandOutput("getconf", "CLK_TCK")
 	s.hz = atoi(strings.TrimSpace(hz))
@@ -44,7 +48,9 @@ func (s *Stat) FinishStat() {
 	// for i := 0; i < s.lineCount; i++ {
 	// 	fmt.Print(C_ABOVE + C_CLEAR)
 	// }
-	fmt.Print(C_CLEAR_SCREEN)
+	if s.watch {
+		fmt.Print(C_CLEAR_SCREEN)
+	}
 
 	for _, line := range s.reportLines {
 		fmt.Println(line)
@@ -54,26 +60,31 @@ func (s *Stat) FinishStat() {
 
 func (s *Stat) ReportItem(old, new StatUnit, timeDelta time.Duration) {
 	seconds := float32(timeDelta) / float32(time.Second)
-	rate := float32(new.Usage()-old.Usage()) * float32(100) / float32(s.hz) / seconds
-	indicator := strings.Repeat("#", int(rate+0.5))
-	line := fmt.Sprintf("%v %-16v %8.2f  %v", new.Id(), new.Name(), rate, indicator)
-	s.reportLines = append(s.reportLines, line)
+	usedJiffies := new.Usage() - old.Usage()
+	if s.showAll || usedJiffies > 0 {
+		rate := float32(usedJiffies) * float32(100) / float32(s.hz) / seconds
+		indicator := strings.Repeat("#", int(rate+0.5))
+		line := fmt.Sprintf("%8v %-16v %8.2f  %v", new.Id(), new.Name(), rate, indicator)
+		s.reportLines = append(s.reportLines, line)
+	}
 }
 
-func (s *Stat) Update(u StatUnit) {
+// Update the process stat. Return true if break the loop
+func (s *Stat) Update(u StatUnit) (finished bool) {
 	var (
 		now       time.Time
 		timeDelta time.Duration
 		children  map[int]StatUnit
 	)
+	finished = false
 	now = time.Now()
 	s.BeginStat()
 
+	children = u.Children()
 	if s.parent != nil {
-		children = u.Children()
 		timeDelta = now.Sub(s.lastTime)
 		s.ReportItem(s.parent, u, timeDelta)
-		s.reportLines = append(s.reportLines, "-------------------------------")
+		s.reportLines = append(s.reportLines, "-----------------------------------")
 
 		keys := getMapKeys(children)
 
@@ -84,9 +95,14 @@ func (s *Stat) Update(u StatUnit) {
 				s.ReportItem(old, v, timeDelta)
 			}
 		}
+		s.FinishStat()
+
+		if !s.watch {
+			finished = true
+		}
 	}
-	s.FinishStat()
 	s.lastTime = now
 	s.parent = u
 	s.children = children
+	return
 }

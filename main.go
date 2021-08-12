@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -10,9 +11,17 @@ import (
 )
 
 func main() {
-	if len(os.Args) == 2 {
-		pidStr := os.Args[1]
-		stat := proc.NewStat()
+	var (
+		showAllThreads bool
+		watch          bool
+	)
+	flag.BoolVar(&showAllThreads, "all", false, "Show stats for all threads")
+	flag.BoolVar(&watch, "watch", false, "Watch realtime usage")
+	flag.Parse()
+
+	if len(flag.Args()) >= 1 {
+		pidStr := flag.Args()[0]
+		stat := proc.NewStat(showAllThreads, watch)
 		pid, _ := strconv.Atoi(pidStr)
 		for {
 			p := proc.NewProcess(pid)
@@ -20,8 +29,13 @@ func main() {
 				fmt.Fprintf(os.Stderr, "Failed to find process %v\n", pidStr)
 				os.Exit(1)
 			}
-			stat.Update(p)
+			finished := stat.Update(p)
+			if finished {
+				break
+			}
 			time.Sleep(time.Second)
 		}
+	} else {
+		fmt.Printf("Usage:\n  %v [--all] [--watch] PID\n", os.Args[0])
 	}
 }

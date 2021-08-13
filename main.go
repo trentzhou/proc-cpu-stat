@@ -17,6 +17,12 @@ func main() {
 	)
 	flag.BoolVar(&showAllThreads, "all", false, "Show stats for all threads")
 	flag.BoolVar(&watch, "watch", false, "Watch realtime usage")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] PID\nOptions:\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
 
 	if len(flag.Args()) >= 1 {
@@ -36,6 +42,6 @@ func main() {
 			time.Sleep(time.Second)
 		}
 	} else {
-		fmt.Printf("Usage:\n  %v [--all] [--watch] PID\n", os.Args[0])
+		flag.Usage()
 	}
 }
